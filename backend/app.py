@@ -7,10 +7,16 @@ from PIL import Image
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
-# Top-level repo paths
+# Model paths - using the new trained models
+BACKEND_ROOT = os.path.dirname(__file__)
+MODEL_DIR = os.path.join(BACKEND_ROOT, 'models')
+KERAS_MODEL_PATH = os.path.join(MODEL_DIR, 'model.keras')
+LABELS_PATH = os.path.join(MODEL_DIR, 'training_set_labels.txt')
+
+# Fallback to old paths if new models don't exist
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-GRAPH_PATH = os.path.join(REPO_ROOT, 'trained_model_graph.pb')
-LABELS_PATH = os.path.join(REPO_ROOT, 'training_set_labels.txt')
+OLD_GRAPH_PATH = os.path.join(REPO_ROOT, 'trained_model_graph.pb')
+OLD_LABELS_PATH = os.path.join(REPO_ROOT, 'training_set_labels.txt')
 
 app = Flask(__name__)
 CORS(app)
@@ -33,42 +39,96 @@ if USE_MOCK:
         return results[:top_k]
 
 else:
-    # Use TF1 compatibility mode to load the existing frozen graph
+    # Try to use the new Keras model first, fallback to old frozen graph
     import tensorflow as tf
-    tf = tf.compat.v1
-    tf.disable_v2_behavior()
+    import numpy as np
+    
+    # Check which model to use
+    use_keras_model = os.path.exists(KERAS_MODEL_PATH)
+    
+    if use_keras_model:
+        print(f"Loading new Keras model from: {KERAS_MODEL_PATH}")
+        # Load the new Keras model
+        model = tf.keras.models.load_model(KERAS_MODEL_PATH)
+        
+        # Load labels
+        if not os.path.exists(LABELS_PATH):
+            raise FileNotFoundError('labels file not found: ' + LABELS_PATH)
+        with open(LABELS_PATH, 'r') as f:
+            label_lines = [line.strip() for line in f.readlines()]
+        
+        sess = None  # Not needed for Keras model
+        
+        def predict_image_bytes(image_bytes, top_k=3):
+            """Predict using the new Keras model"""
+            # Open and preprocess the image
+            image = Image.open(io.BytesIO(image_bytes))
+            
+            # Convert to RGB if needed
+            if image.mode != 'RGB':
+                image = image.convert('RGB')
+            
+            # Resize to 200x200 (model input size)
+            image = image.resize((200, 200))
+            
+            # Convert to numpy array and normalize
+            img_array = np.array(image, dtype=np.float32) / 255.0
+            img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+            
+            # Make prediction
+            predictions = model.predict(img_array, verbose=0)[0]
+            
+            # Get top K predictions
+            top_indices = np.argsort(predictions)[::-1][:top_k]
+            
+            results = []
+            for idx in top_indices:
+                if idx < len(label_lines):
+                    results.append({
+                        'label': label_lines[idx],
+                        'score': float(predictions[idx])
+                    })
+            
+            return results
+        
+    else:
+        print(f"Keras model not found, using fallback frozen graph from: {OLD_GRAPH_PATH}")
+        # Use TF1 compatibility mode to load the existing frozen graph
+        tf = tf.compat.v1
+        tf.disable_v2_behavior()
 
-    # Load labels
-    if not os.path.exists(LABELS_PATH):
-        raise FileNotFoundError('labels file not found: ' + LABELS_PATH)
-    with tf.gfile.GFile(LABELS_PATH) as f:
-        label_lines = [line.rstrip() for line in f]
+        # Load labels - try new location first, then old
+        labels_file = LABELS_PATH if os.path.exists(LABELS_PATH) else OLD_LABELS_PATH
+        if not os.path.exists(labels_file):
+            raise FileNotFoundError('labels file not found: ' + labels_file)
+        with tf.gfile.GFile(labels_file) as f:
+            label_lines = [line.rstrip() for line in f]
 
-    # Load graph
-    if not os.path.exists(GRAPH_PATH):
-        raise FileNotFoundError('graph file not found: ' + GRAPH_PATH)
-    with tf.gfile.FastGFile(GRAPH_PATH, 'rb') as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-        tf.import_graph_def(graph_def, name='')
+        # Load graph
+        if not os.path.exists(OLD_GRAPH_PATH):
+            raise FileNotFoundError('graph file not found: ' + OLD_GRAPH_PATH)
+        with tf.gfile.FastGFile(OLD_GRAPH_PATH, 'rb') as f:
+            graph_def = tf.GraphDef()
+            graph_def.ParseFromString(f.read())
+            tf.import_graph_def(graph_def, name='')
 
-    # Create a single session for the app
-    sess = tf.Session()
-    softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
+        # Create a single session for the app
+        sess = tf.Session()
+        softmax_tensor = sess.graph.get_tensor_by_name('final_result:0')
 
-    def predict_image_bytes(image_bytes, top_k=3):
-        """Run the model on JPEG image bytes and return top predictions.
+        def predict_image_bytes(image_bytes, top_k=3):
+            """Run the model on JPEG image bytes and return top predictions.
 
-        The original project expects 'DecodeJpeg/contents:0' to accept raw
-        JPEG bytes, so we forward the bytes directly.
-        """
-        predictions = sess.run(softmax_tensor, {'DecodeJpeg/contents:0': image_bytes})
-        probs = predictions[0]
-        top_idx = probs.argsort()[-top_k:][::-1]
-        results = []
-        for i in top_idx:
-            results.append({'label': label_lines[i], 'score': float(probs[i])})
-        return results
+            The original project expects 'DecodeJpeg/contents:0' to accept raw
+            JPEG bytes, so we forward the bytes directly.
+            """
+            predictions = sess.run(softmax_tensor, {'DecodeJpeg/contents:0': image_bytes})
+            probs = predictions[0]
+            top_idx = probs.argsort()[-top_k:][::-1]
+            results = []
+            for i in top_idx:
+                results.append({'label': label_lines[i], 'score': float(probs[i])})
+            return results
 
 
 # Simple in-memory session store to assemble text across multiple frames
