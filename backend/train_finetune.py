@@ -367,7 +367,7 @@ def export_models(model, class_names, output_dir):
     
     # 1. Save as SavedModel (recommended for serving)
     savedmodel_path = os.path.join(output_dir, 'saved_model')
-    model.save(savedmodel_path)
+    model.export(savedmodel_path)
     logger.info(f"SavedModel exported to: {savedmodel_path}")
     
     # 2. Save class names

@@ -421,21 +421,61 @@ callbacks_phase2 = [
     )
 ]
 
-# Train phase 2 (15 more epochs)
-history_phase2 = model.fit(
-    train_ds,
-    epochs=15,
-    validation_data=val_ds,
-    class_weight=class_weights,
-    callbacks=callbacks_phase2,
-    verbose=1,
-    initial_epoch=15
-)
+# Train phase 2 (15 more epochs) - FIXED with proper epoch counting
+try:
+    print("Starting Phase 2 training...")
+    history_phase2 = model.fit(
+        train_ds,
+        epochs=30,  # Total epochs (15 + 15)
+        validation_data=val_ds,
+        class_weight=class_weights,
+        callbacks=callbacks_phase2,
+        verbose=1,
+        initial_epoch=15  # Start from epoch 15, train to epoch 30
+    )
+    print("✅ Phase 2 completed successfully")
 
-# Combine histories
+    # Check if training actually happened
+    if len(history_phase2.history) == 0 or len(history_phase2.history.get('loss', [])) == 0:
+        print("⚠️  Phase 2 didn't train any epochs (check epoch settings)")
+        raise ValueError("No epochs trained in Phase 2")
+
+except Exception as e:
+    print(f"⚠️  Phase 2 training failed: {e}")
+    print("Creating empty history for phase 2...")
+    # Create empty history object
+    class EmptyHistory:
+        def __init__(self):
+            self.history = {}
+    history_phase2 = EmptyHistory()
+
+# Combine histories - Fix for empty Phase 2 history
 combined_history = {}
-for key in history_phase1.history.keys():
-    combined_history[key] = history_phase1.history[key] + history_phase2.history[key]
+
+# Debug: Print available keys
+print("Phase 1 history keys:", list(history_phase1.history.keys()))
+print("Phase 2 history keys:", list(history_phase2.history.keys()))
+
+# Check if Phase 2 training actually happened
+if len(history_phase2.history) == 0:
+    print("⚠️  Phase 2 training failed - using only Phase 1 history")
+    combined_history = history_phase1.history.copy()
+else:
+    # Normal case - combine both phases
+    common_keys = set(history_phase1.history.keys()) & set(history_phase2.history.keys())
+    print(f"Common keys: {common_keys}")
+
+    for key in common_keys:
+        combined_history[key] = history_phase1.history[key] + history_phase2.history[key]
+
+    # Add any missing keys from phase 1
+    for key in history_phase1.history.keys():
+        if key not in combined_history:
+            if 'loss' in history_phase2.history:
+                combined_history[key] = history_phase1.history[key] + [None] * len(history_phase2.history['loss'])
+            else:
+                combined_history[key] = history_phase1.history[key]
+            print(f"⚠️  Added {key} from phase 1 only")
 
 print("✅ Training completed!")
 ```
