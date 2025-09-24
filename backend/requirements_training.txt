@@ -1,0 +1,12 @@
+# Training requirements (extends inference requirements)
+Flask==2.3.4
+Flask-Cors==4.0.0
+tensorflow==2.15.0
+Pillow==10.0.0
+
+# Additional training dependencies
+matplotlib>=3.5.0
+seaborn>=0.11.0
+scikit-learn>=1.1.0
+pandas>=1.4.0
+tqdm>=4.64.0
