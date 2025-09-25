@@ -1,7 +1,8 @@
 :root {
   --bg: #0f1720;
   --card: #0b1220;
-  --accent: #10b981;
+  --accent: #ffb703; /* warm playful */
+  --accent-2: #8ecae6; /* soft sky */
   --muted: #9ca3af;
   color-scheme: dark;
 }
@@ -13,60 +14,202 @@ body {
   background: linear-gradient(180deg, #071026 0%, #07172a 100%);
   color: #e6eef8;
   margin: 0;
-  padding: 24px;
+  padding: 28px;
 }
 main {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
+.app-card {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03),
+    rgba(255, 255, 255, 0.01)
+  );
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.kid-area {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
 h1 {
   margin: 0 0 12px;
+  font-size: 32px;
+  color: var(--accent-2);
+  text-align: center;
+}
+
+.kid-letter {
+  font-size: 140px;
+  width: 320px;
+  height: 220px;
+  line-height: 220px;
+  margin: 0 auto 8px;
+  background: linear-gradient(180deg, #ffd89b, #ffb703);
+  border-radius: 18px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  font-weight: 900;
+  color: #052018;
+}
+
+.confidence-ring {
+  width: 360px;
+  height: 260px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: box-shadow 300ms ease, transform 300ms ease;
+}
+
+.confidence-ring.high {
+  box-shadow: 0 0 0 12px rgba(142, 202, 230, 0.35),
+    0 12px 30px rgba(0, 0, 0, 0.18);
+  transform: scale(1.03);
+}
+
+.confidence-ring.low {
+  box-shadow: 0 0 0 6px rgba(255, 183, 3, 0.12);
+  transform: scale(0.98);
+}
+
+.kid-letter.emoji {
+  font-size: 110px;
+}
+
+.game-controls {
+  margin-top: 12px;
+  text-align: center;
+}
+.game-panel {
+  margin-top: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 8px;
+  border-radius: 8px;
+}
+.game-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+.target {
+  font-weight: 900;
+  font-size: 20px;
+}
+.score {
+  font-weight: 900;
+  font-size: 20px;
+}
+.timer {
+  margin-top: 6px;
+  color: rgba(5, 32, 24, 0.6);
+}
+
+.success-burst {
+  animation: successPulse 600ms ease forwards;
+}
+@keyframes successPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.kid-assembled {
+  font-size: 20px;
+  margin-top: 8px;
+}
+
+.kid-hint {
+  color: rgba(5, 32, 24, 0.8);
+  margin-top: 6px;
 }
 .controls {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin: 8px 0;
 }
 .controls label {
-  background: rgba(255, 255, 255, 0.03);
-  padding: 6px 8px;
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 8px 10px;
+  border-radius: 8px;
   font-size: 14px;
 }
 .video-row {
   display: flex;
-  gap: 12px;
+  gap: 18px;
   align-items: flex-start;
+  margin-top: 10px;
+}
+.video-wrap {
+  background: #000;
+  padding: 8px;
+  border-radius: 12px;
 }
 video {
   background: #000;
   border-radius: 8px;
-  width: 480px;
-  max-width: 60%;
+  width: 560px;
+  max-width: 100%;
   height: auto;
-  border: 2px solid rgba(255, 255, 255, 0.04);
+  display: block;
 }
 .status {
   flex: 1;
 }
 #predictions {
-  margin-top: 8px;
+  margin-top: 12px;
+}
+.predictions-list {
+  margin-top: 12px;
+}
+.predictions-list div {
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 6px;
 }
 .assembled {
   margin-top: 10px;
   padding: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
   font-weight: 700;
 }
-button {
-  background: var(--accent);
+.start {
+  background: var(--accent-2);
   color: #052018;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 10px 16px;
+  border-radius: 10px;
   border: 0;
-  cursor: pointer;
+  font-weight: 800;
+}
+.stop {
+  background: #10b981;
+  color: #052018;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 0;
+  font-weight: 700;
+}
+.small {
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+.big-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 button:disabled {
   opacity: 0.5;
@@ -76,8 +219,21 @@ code {
   padding: 2px 6px;
   border-radius: 4px;
 }
-small {
+.tech-tip {
   display: block;
   margin-top: 12px;
-  color: var(--muted);
+  color: rgba(5, 32, 24, 0.7);
+}
+.muted {
+  color: rgba(5, 32, 24, 0.6);
+  margin-top: 6px;
+}
+.small-preds {
+  margin-top: 8px;
+  color: rgba(5, 32, 24, 0.8);
+}
+.advanced summary {
+  cursor: pointer;
+  font-weight: 700;
+  margin-top: 12px;
 }

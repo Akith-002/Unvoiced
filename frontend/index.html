@@ -5,33 +5,70 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Unvoiced — Webcam Tester</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- cache-bust to force reload when we change styles -->
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 
 <body>
     <main>
-        <h1>Unvoiced — Webcam Test</h1>
+        <div class="app-card">
+            <h1>Unvoiced — Say the Letter!</h1>
 
-        <div class="controls">
-            <label>Backend URL: <input id="backendUrl" value="http://localhost:5000/predict-image"></label>
-            <label>Session ID: <input id="sessionId" placeholder="device-session-1"></label>
-            <label>Interval (ms): <input id="intervalMs" type="number" value="600" min="100"></label>
-            <label><input id="useForm" type="checkbox" checked> Send as multipart/form-data (recommended)</label>
-        </div>
+            <!-- Big kid-friendly display -->
+            <section class="kid-area" aria-label="Kid view">
+                <div id="confidenceRing" class="confidence-ring" aria-hidden="true">
+                    <div id="kidLetter" class="kid-letter" aria-live="polite">?</div>
+                </div>
 
-        <div class="video-row">
-            <video id="video" autoplay playsinline></video>
-            <div class="status">
-                <button id="startBtn">Start</button>
-                <button id="stopBtn" disabled>Stop</button>
-                <div id="lastTime">Idle</div>
-                <div id="predictions"></div>
-                <div id="assembled" class="assembled"></div>
+                <div id="assembled" class="assembled kid-assembled" aria-live="polite">(no text yet)</div>
+                <div class="kid-hint">Point your hand at the camera. Click the video to take a photo. I'll try to guess
+                    the letter!</div>
+
+                <!-- Game controls -->
+                <div class="game-controls">
+                    <label class="game-toggle"><input id="gameMode" type="checkbox"> Game mode</label>
+                    <div id="gamePanel" class="game-panel" style="display:none">
+                        <div class="game-row">
+                            <div class="target">Target: <span id="targetLetter">-</span></div>
+                            <div class="score">Score: <span id="score">0</span></div>
+                            <button id="newTargetBtn" class="small">New Target</button>
+                        </div>
+                        <div class="timer">Time left: <span id="timeLeft">-</span>s</div>
+                    </div>
+                </div>
+            </section>
+
+            <div class="video-row">
+                <div class="video-wrap">
+                    <video id="video" autoplay playsinline muted></video>
+                </div>
+
+                <div class="status">
+                    <div class="big-controls">
+                        <button id="startBtn" class="start">Start</button>
+                        <button id="stopBtn" class="stop" disabled>Stop</button>
+                    </div>
+
+                    <div id="lastTime" class="muted">Idle</div>
+                    <div id="predictions" class="predictions-list"></div>
+                </div>
             </div>
-        </div>
 
-        <small>Tip: run the backend from the repository root: <code>$env:USE_MOCK='1'; python backend\app.py</code>
-            (PowerShell)</small>
+            <!-- Advanced settings (collapsed by default) -->
+            <details class="advanced" id="advancedPanel">
+                <summary id="advancedToggle">Advanced settings</summary>
+                <div class="controls">
+                    <label>Backend URL: <input id="backendUrl" value="http://localhost:5000/predict-image"></label>
+                    <label>Session ID: <input id="sessionId" placeholder="device-session-1"></label>
+                    <label>Interval (ms): <input id="intervalMs" type="number" value="600" min="100"></label>
+                    <label><input id="useForm" type="checkbox" checked> Send as multipart/form-data</label>
+                    <label><input id="speakPred" type="checkbox" checked> Speak predictions aloud</label>
+                </div>
+            </details>
+
+            <small class="tech-tip">Tip: run the backend from the repository root:
+                <code>$env:USE_MOCK='1'; python backend\app.py</code> (PowerShell)</small>
+        </div>
 
         <!-- hidden canvas used to capture frames -->
         <canvas id="captureCanvas" width="200" height="200" style="display:none"></canvas>
