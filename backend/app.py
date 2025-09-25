@@ -172,6 +172,24 @@ def predict_image():
     # Accept multipart/form-data file or JSON with base64 string
     image_bytes = None
 
+    # Log incoming form/json keys (do not log large or binary values)
+    try:
+        form_keys = list(request.form.keys()) if request.form else []
+        json_keys = []
+        try:
+            j = request.get_json(silent=True)
+            if isinstance(j, dict):
+                json_keys = list(j.keys())
+        except Exception:
+            json_keys = []
+
+        print(f"[DEBUG] incoming request keys - form: {form_keys}, json: {json_keys}")
+        # If assembled_text is being sent from frontend it will appear in one of these
+        if 'assembled_text' in form_keys or 'assembled_text' in json_keys:
+            print('[DEBUG] incoming request contains assembled_text field')
+    except Exception:
+        pass
+
     # 1) multipart file
     if 'image' in request.files:
         f = request.files['image']
@@ -196,16 +214,25 @@ def predict_image():
     if not image_bytes:
         return jsonify({'error': 'no image provided'}), 400
 
+    # Debug logging for image format analysis
+    print(f"[DEBUG] Received image: {len(image_bytes)} bytes")
+    print(f"[DEBUG] First 10 bytes: {image_bytes[:10].hex() if len(image_bytes) >= 10 else 'N/A'}")
+    print(f"[DEBUG] Is JPEG (starts with FFD8): {len(image_bytes) >= 2 and image_bytes[0] == 0xFF and image_bytes[1] == 0xD8}")
+    
     # If the bytes are not JPEG, try to convert using Pillow to JPEG
     try:
         # Quick check: JPEG files start with 0xFF 0xD8
         if not (len(image_bytes) >= 2 and image_bytes[0] == 0xFF and image_bytes[1] == 0xD8):
+            print(f"[DEBUG] Converting non-JPEG to JPEG")
             img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+            print(f"[DEBUG] Original image: {img.size}, {img.mode}")
             out = io.BytesIO()
-            img.save(out, format='JPEG')
+            img.save(out, format='JPEG', quality=90)
             image_bytes = out.getvalue()
-    except Exception:
+            print(f"[DEBUG] Converted image: {len(image_bytes)} bytes")
+    except Exception as e:
         # If conversion fails, continue and let TF attempt decode
+        print(f"[DEBUG] Image conversion failed: {e}")
         pass
 
     try:
@@ -302,8 +329,18 @@ def predict_image():
                     # give up silently; we don't want to break the API
                     pass
 
-            # Also print a concise log to stdout so the server logs show the event
-            print(f"[DEBUG] saved image -> {fpath}; predicted={top_label}; assembled={current_text}")
+            # Also print a concise log to stdout so the server logs show the event.
+            # Truncate assembled_text in logs to avoid extremely long entries.
+            try:
+                if current_text is None:
+                    asm_disp = 'None'
+                else:
+                    # Keep only first 120 chars and indicate truncation
+                    asm_disp = (str(current_text)[:120] + '...') if len(str(current_text)) > 120 else str(current_text)
+                print(f"[DEBUG] saved image -> {fpath}; predicted={top_label}; assembled={asm_disp}")
+            except Exception:
+                # Fallback to original minimal log if formatting fails
+                print(f"[DEBUG] saved image -> {fpath}; predicted={top_label}; assembled=<error formatting>")
     except Exception as ex:
         # Do not allow debugging code to break normal responses
         print('[DEBUG] failed to save debug image:', ex)
