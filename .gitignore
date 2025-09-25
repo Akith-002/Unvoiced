@@ -1,2 +1,57 @@
+# dataset directories (large / generated training data)
 asl_alphabet_train/
 dataset/
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*.pyc
+
+# Virtual environments and env files
+venv/
+env/
+.venv/
+.env
+
+# Editor and OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Test, coverage and logs
+.pytest_cache/
+.coverage
+*.log
+logs/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# Model artifacts and large binaries
+trained_model_graph.pb
+*.pb
+*.tflite
+*.h5
+*.ckpt
+models/
+
+# Project artifacts / outputs
+hist/
+prediction.mp3
+"Test Images/"
+
+# Databases and archives
+*.sqlite3
+*.db
+*.zip
+
+# Misc
+node_modules/

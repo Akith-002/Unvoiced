@@ -4,8 +4,32 @@ import base64
 import json
 import threading
 from PIL import Image
+try:
+    # Some environments may have an older or patched Pillow where
+    # ImageFile.StubHandler (and StubImageFile) is missing. A few
+    # third-party libraries expect these attributes to exist. Provide a
+    # lightweight compatibility shim so image decoding doesn't fail with
+    # "module 'PIL.ImageFile' has no attribute 'StubHandler'".
+    import PIL.ImageFile as _ImageFile
+    if not hasattr(_ImageFile, 'StubHandler'):
+        class StubHandler:
+            """Minimal stub for compatibility; real behavior isn't needed
+            for our use-case (we open/convert images via PIL.Image).
+            """
+            pass
+
+        class StubImageFile(object):
+            pass
+
+        _ImageFile.StubHandler = StubHandler
+        _ImageFile.StubImageFile = StubImageFile
+except Exception:
+    # If the shim fails for any reason, continue; we'll let actual
+    # image operations surface errors later and return them to the client.
+    pass
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import time
 
 # Model paths - using the new trained models
 BACKEND_ROOT = os.path.dirname(__file__)
@@ -234,6 +258,38 @@ def predict_image():
         'predicted_label': top_label,
         'assembled_text': current_text
     }
+
+    # Debugging: save incoming images and prediction metadata when useful.
+    # Enable globally by setting environment var DEBUG_SAVE_IMAGES=1, or the
+    # server will save when the top predicted label is 'A' (to investigate the
+    # "always A" issue). Files are written into backend/debug_received/.
+    try:
+        save_debug = os.environ.get('DEBUG_SAVE_IMAGES', '0') == '1' or (top_label == 'A')
+        if save_debug:
+            debug_dir = os.path.join(BACKEND_ROOT, 'debug_received')
+            os.makedirs(debug_dir, exist_ok=True)
+            ts = int(time.time() * 1000)
+            sess = session_id or 'no-session'
+            fname = f"{ts}_sess-{sess}_pred-{str(top_label)}.jpg"
+            fpath = os.path.join(debug_dir, fname)
+            # Write raw image bytes to disk for inspection
+            try:
+                with open(fpath, 'wb') as out:
+                    out.write(image_bytes)
+            except Exception:
+                # fallback: try to convert via PIL then save
+                try:
+                    img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+                    img.save(fpath, format='JPEG')
+                except Exception:
+                    # give up silently; we don't want to break the API
+                    pass
+
+            # Also print a concise log to stdout so the server logs show the event
+            print(f"[DEBUG] saved image -> {fpath}; predicted={top_label}; assembled={current_text}")
+    except Exception as ex:
+        # Do not allow debugging code to break normal responses
+        print('[DEBUG] failed to save debug image:', ex)
     return jsonify(resp)
 
 

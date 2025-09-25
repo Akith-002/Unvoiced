@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Unvoiced — Webcam Tester</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <main>
+        <h1>Unvoiced — Webcam Test</h1>
+
+        <div class="controls">
+            <label>Backend URL: <input id="backendUrl" value="http://localhost:5000/predict-image"></label>
+            <label>Session ID: <input id="sessionId" placeholder="device-session-1"></label>
+            <label>Interval (ms): <input id="intervalMs" type="number" value="600" min="100"></label>
+            <label><input id="useForm" type="checkbox" checked> Send as multipart/form-data (recommended)</label>
+        </div>
+
+        <div class="video-row">
+            <video id="video" autoplay playsinline></video>
+            <div class="status">
+                <button id="startBtn">Start</button>
+                <button id="stopBtn" disabled>Stop</button>
+                <div id="lastTime">Idle</div>
+                <div id="predictions"></div>
+                <div id="assembled" class="assembled"></div>
+            </div>
+        </div>
+
+        <small>Tip: run the backend from the repository root: <code>$env:USE_MOCK='1'; python backend\app.py</code>
+            (PowerShell)</small>
+
+        <!-- hidden canvas used to capture frames -->
+        <canvas id="captureCanvas" width="200" height="200" style="display:none"></canvas>
+    </main>
+    <script src="app.js"></script>
+</body>
+
+</html>
