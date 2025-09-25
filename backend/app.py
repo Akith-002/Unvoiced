@@ -30,6 +30,7 @@ except Exception:
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import time
+import random
 
 # Model paths - using the new trained models
 BACKEND_ROOT = os.path.dirname(__file__)
@@ -259,18 +260,34 @@ def predict_image():
         'assembled_text': current_text
     }
 
-    # Debugging: save incoming images and prediction metadata when useful.
-    # Enable globally by setting environment var DEBUG_SAVE_IMAGES=1, or the
-    # server will save when the top predicted label is 'A' (to investigate the
-    # "always A" issue). Files are written into backend/debug_received/.
+    # Debugging: save incoming images and prediction metadata occasionally.
+    # Behavior:
+    # - If DEBUG_SAVE_IMAGES=1 => always save
+    # - Otherwise, save with probability SAVE_SAMPLE_RATE (0.05 by default)
+    #   only when top_label is truthy (e.g. to reduce noise).
+    # - Existing behavior of writing to backend/debug_received/ is preserved.
     try:
-        save_debug = os.environ.get('DEBUG_SAVE_IMAGES', '0') == '1' or (top_label == 'A')
+        env_force = os.environ.get('DEBUG_SAVE_IMAGES', '0') == '1'
+        # Sampling rate: float between 0 and 1 (default 0.05 == 5%)
+        try:
+            sample_rate = float(os.environ.get('SAVE_SAMPLE_RATE', '0.05'))
+            if sample_rate < 0.0 or sample_rate > 1.0:
+                sample_rate = 0.05
+        except Exception:
+            sample_rate = 0.05
+
+        should_sample = random.random() < sample_rate
+        # Only save when forced, or when sampling succeeds and we have a label
+        save_debug = env_force or (top_label is not None and should_sample)
+
         if save_debug:
             debug_dir = os.path.join(BACKEND_ROOT, 'debug_received')
             os.makedirs(debug_dir, exist_ok=True)
             ts = int(time.time() * 1000)
             sess = session_id or 'no-session'
-            fname = f"{ts}_sess-{sess}_pred-{str(top_label)}.jpg"
+            # sanitize label for filename
+            safe_label = str(top_label).replace(os.path.sep, '_') if top_label is not None else 'None'
+            fname = f"{ts}_sess-{sess}_pred-{safe_label}.jpg"
             fpath = os.path.join(debug_dir, fname)
             # Write raw image bytes to disk for inspection
             try:

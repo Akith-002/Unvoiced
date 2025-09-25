@@ -48,6 +48,9 @@ hist/
 prediction.mp3
 "Test Images/"
 
+# Backend debug images (saved during inference for occasional inspection)
+backend/debug_received/
+
 # Databases and archives
 *.sqlite3
 *.db
